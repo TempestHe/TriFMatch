@@ -1,0 +1,1 @@
+We only provide the extended queries, data graphs can be obtained from previous work: https://github.com/RapidsAtHKUST/SubgraphMatching
