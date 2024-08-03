@@ -86,21 +86,6 @@ SubgraphEnum::SubgraphEnum(Graph* data_graph){
 
 }
 
-bool debug(int depth, Vertex* emb, vector<Vertex>& order){
-    //560,508855,97672,97662,97668,97652,508904,511522,97650,97648,190091,97655,510309,190092,515644,508857,80602,97664,511287,512715,97649,97653,522241,514799,16479,538317,80600,515790,522225,538839,80597,539943
-    // vector<Vertex> content = {0, 13985,13928,10141,3325,13940,4298,13963,14001,13970,13931,10151};
-    vector<Vertex> content = {0, 568,600,570,593,599,564,595,569};
-    if(depth >= content.size()){
-        return false;
-    }
-    for(int i=1;i<depth+1;++i){
-        if(emb[i] != content[i]){
-            return false;
-        }
-    }
-    return true;
-}
-
 void SubgraphEnum::initialization(){
     // initialize the order_index
     order_index_ = vector<Vertex>(order_.size(), 0);
@@ -482,19 +467,8 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
     auto start = std::chrono::high_resolution_clock::now();
     order_ = spectrum[0];
     MDE(query_graph_, order_, storage_);
-    // order_ = {30,46,52,31,5,34,49,22,20,13,37,0,27,38,18,23,25,42,39,24,53,9,32,41,15,8,21,33,6,35,29,55,45,43,12,10,54,40,3,50,36,16,14,26,48,19,11,28,44,51,47,7,4,2,1,17};
     order_.insert(order_.begin(), 0); // padding
-    // cout<<"original_order:";
-    // for(auto n : order_){
-    //     cout<<n<<", ";
-    // }
-    // cout<<endl;
-    // order_adjustment();
     initialization();
-    // for(auto n : order_){
-    //     cout<<n<<", ";
-    // }
-    // cout<<endl;
     auto end = std::chrono::high_resolution_clock::now();
     order_adjust_time_ = NANOSECTOSEC(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
     query_time_ += order_adjust_time_;
@@ -605,22 +579,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
             v = local_candidates[offset];
             embedding_depth_[cur_depth] = v;
 
-            // if(cur_depth<=18){
-            //     cout<<"cur:"<<cur_depth<<":"<<v<<":"<<candidates_offset_[cur_depth]<<endl;
-            //     for(int i=1;i<=cur_depth;++i){
-            //         cout<<embedding_depth_[i]<<" ";
-            //     }
-            //     cout<<endl;
-            //     // candidates_offset_[cur_depth] ++;
-            //     // continue;
-            // }
-            // cout<<cur_depth<<":";
-            // for(int i=1;i<=cur_depth;++i){
-            //     cout<<embedding_depth_[i]<<" ";
-            // }
-            // cout<<endl;
-
-            // cout<<"searching:"<<cur_depth<<":"<<u<<":"<<v<<":"<<candidates_offset_[cur_depth]<<endl;
 #if FAILING_SET == 1
             failing_set_depth[cur_depth].reset();
 #endif
@@ -632,7 +590,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
 #endif
 
             if(cur_depth == query_vertex_count_){
-                // max_search_depth[cur_depth-1] = (max_search_depth[cur_depth-1]<max_search_depth[cur_depth]) ? max_search_depth[cur_depth] : max_search_depth[cur_depth-1];
                 for(int i=0;i<local_size; ++i){
                     v = local_candidates[i];
                     state_count_ ++;
@@ -647,9 +604,7 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                         for(Vertex z=1;z<=query_vertex_count_; ++z){
                             cout<<embedding_depth_[z]<<" ";
                         }
-                        // cout<<validate_correctness(query_graph_, data_graph_, order_index_, embedding_depth_);
                         cout<<endl;
-                        // exit(0);
 #endif
 #if FAILING_SET==1
                         // belongs to embedding-class
@@ -662,7 +617,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
 
                         conflicted_depth = visited_query_depth_[v];
 #if FAILING_SET==1
-                        // failing_set_depth[cur_depth] = ancestors_depth_[cur_depth] | ancestors_depth_[conflicted_depth];
                         failing_set_depth[cur_depth] = *(failing_set_stack_[cur_depth].rbegin()) | *(failing_set_stack_[conflicted_depth].rbegin());
 #endif
 #if CD_EXCLUSION_FILTER==1 || CD_COMPLETE_FILTER == 1
@@ -680,7 +634,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                         failing_set_depth[cur_depth-1] |= failing_set_depth[cur_depth];
 #endif
                     }
-                    // cout<<"conflict:"<<cur_depth<<":"<<v<<":"<<visited_query_depth_[v]<<":"<<state_count_<<endl;
                 }
                 candidates_offset_[cur_depth] = candidates_stack_[cur_depth].rbegin()->second;
             }else{
@@ -688,8 +641,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                 candidates_offset_[cur_depth] ++;
                 history_candidates_[cur_depth+1].clear();
 
-                // start intersection
-                // history_candidates_[cur_depth].append_history_reorded_strict(v, offset, candidates_stack_, failing_set_stack_);
                 history_candidates_[cur_depth].append_history(v, encoder, candidates_stack_, failing_set_stack_
 #if LOOKAHEAD_OVERLAP == 0
                     , embedding_depth_
@@ -702,14 +653,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                 if(offset > 0){
 #if CD_EXCLUSION_FILTER==1
                     if(CFilter.validate_exclusion_containment(cur_depth, candidates_stack_, v, history_candidates_[cur_depth]) == true){
-                        // cout<<"ff2-exclusion:"<<cur_depth<<":"<<u<<":"<<state_count_<<endl;
-                        // if(debug_print){
-                        // cout<<"ff2-standard:"<<cur_depth<<":"<<u<<endl;
-                        // for(int x=1;x<=cur_depth;++x){
-                        //     cout<<embedding_depth_[x]<<", ";
-                        // }
-                        // cout<<endl;
-                        // }
 #if PRINT_LEAF_STATE==1
                         leaf_states_counter_[CD_STATE] ++;
 #endif
@@ -720,24 +663,12 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                             assert(candidates_stack_[suc_depth].size() == failing_set_stack_[suc_depth].size()-1);
 #endif                        
                         }
-// #if FAILING_SET == 1
-//                         cur_sets.failing_set_ = result_fs->failing_set_;
-// #endif
-//                         cur_sets.conflict_set_depth_ = result_fs->conflict_set_depth_;
                         max_search_depth[cur_depth-1] = (max_search_depth[cur_depth-1]<max_search_depth[cur_depth]) ? max_search_depth[cur_depth] : max_search_depth[cur_depth-1];
                         continue;
                     }
 #endif
 #if CD_COMPLETE_FILTER == 1
                     if(CFilter.validate_complete_containment(cur_depth, candidates_stack_, v, history_candidates_[cur_depth], embedding_depth_) == true){
-                        // cout<<"ff2-complete:"<<cur_depth<<":"<<u<<":"<<state_count_<<endl;
-                        // if(debug_print){
-                        // cout<<"ff2-extended:"<<cur_depth<<":"<<u<<endl;
-                        // for(int x=1;x<=cur_depth;++x){
-                        //     cout<<embedding_depth_[x]<<", ";
-                        // }
-                        // cout<<endl;
-                        // }
                         for(auto suc_depth : successor_neighbors_in_depth_[cur_depth]){
                             candidates_stack_[suc_depth].pop_back();
 #if FAILING_SET==1
@@ -748,7 +679,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
 #if PRINT_LEAF_STATE==1
                         leaf_states_counter_[CD_STATE]++;
 #endif
-                        // max_search_depth[cur_depth-1] = (max_search_depth[cur_depth-1]<max_search_depth[cur_depth]) ? max_search_depth[cur_depth] : max_search_depth[cur_depth-1];
                         continue;
                     }
 #endif
@@ -783,37 +713,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                     }
                     continue;
                 }
-//                 bitset<MAX_QUERY_SIZE> failing_set_for_empty;
-//                 bool empty_candidates = false;
-//                 for(auto suc_depth : successor_neighbors_in_depth_[cur_depth]){
-//                     if(candidates_stack_[suc_depth].rbegin()->second == 0){
-//                         if(empty_candidates == false){
-//                             failing_set_for_empty = ancestors_depth_[suc_depth];
-//                             empty_candidates = true;
-//                             break;
-//                         }else{
-//                             failing_set_for_empty &= ancestors_depth_[suc_depth];
-//                         }
-//                         // cout<<cur_depth<<":"<<suc_depth<<endl;
-//                     }
-//                 }
-//                 if(empty_candidates == true){
-//                     for(auto suc_depth : successor_neighbors_in_depth_[cur_depth]){
-//                         candidates_stack_[suc_depth].pop_back();
-//                     }
-// #if FAILING_SET==1
-//                     failing_set_depth[cur_depth] = failing_set_for_empty;
-//                     if(find_matches_[cur_depth-1] == false){
-//                         failing_set_depth[cur_depth-1] |= failing_set_depth[cur_depth];
-//                     }
-// #endif
-// #if PRINT_LEAF_STATE==1
-//                     leaf_states_counter_[FD_STATE] ++;
-// #endif
-//                     cout<<"emptyset:"<<cur_depth<<":"<<u<<":"<<v<<":"<<state_count_<<endl;
-//                     // max_search_depth[cur_depth-1] = (max_search_depth[cur_depth-1]<max_search_depth[cur_depth]) ? max_search_depth[cur_depth] : max_search_depth[cur_depth-1];
-//                     continue;
-//                 }
 #endif
 
 
@@ -829,15 +728,12 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
 #if FAILING_SET==1
                     // belongs to conflict-class
                     if(find_matches_[cur_depth-1] == false){
-                        // failing_set_depth[cur_depth-1] |= ancestors_depth_[cur_depth] | ancestors_depth_[conflicted_depth];
                         failing_set_depth[cur_depth-1] |= *(failing_set_stack_[cur_depth].rbegin()) | *(failing_set_stack_[conflicted_depth].rbegin());
                     }
 #endif
 #if CD_EXCLUSION_FILTER==1 || CD_COMPLETE_FILTER == 1
                     conflict_source_depth[conflicted_depth].set(cur_depth);
 #endif               
-                    // cout<<"conflict:"<<cur_depth<<":"<<v<<":"<<visited_query_depth_[v]<<":"<<state_count_<<endl;
-                    // max_search_depth[cur_depth-1] = (max_search_depth[cur_depth-1]<max_search_depth[cur_depth]) ? max_search_depth[cur_depth] : max_search_depth[cur_depth-1];
                     continue;
                 }
 
@@ -870,106 +766,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                 }
 #endif
 
-#if PGHOLE_CONFLICT == 1
-//                 visited_query_depth_[v] = cur_depth;
-//                 if(check_neighbor_conflict_.test(cur_depth) == true){
-//                     bool whether_conflict = true;
-//                     vector<Vertex> local_conflict_depths;
-//                     vector<pair<int, int>> conflict_pairs; // for conflict source
-//                     for(int y=0; y<unmatched_group[u].size(); ++y){
-//                         vector<Vertex>& candidate_depths = unmatched_group[u][y];
-//                         vector<Vertex>& matched_depths = matched_group[u][y];
-//                         conflict_checking_order.clear();
-//                         for(auto depth : candidate_depths){
-//                             conflict_checking_order.push_back(depth);
-//                             conflict_checking_order.push_back(candidates_stack_[depth].rbegin()->second);
-//                         }
-//                         // reorder
-//                         for(int m=0;m<conflict_checking_order.size();m+=2){
-//                             for(int n=m+2;n<conflict_checking_order.size();n+=2){
-//                                 if(conflict_checking_order[m+1] > conflict_checking_order[n+1]){
-//                                     swap(conflict_checking_order[m], conflict_checking_order[n]);
-//                                     swap(conflict_checking_order[m+1], conflict_checking_order[n+1]);
-//                                 }
-//                             }
-//                         }
-//                         // start validating
-//                         neighbor_candidates_.clear();
-//                         conflict_pairs.clear();
-//                         int m = 0;
-//                         bool is_empty = true;
-//                         for(;m<conflict_checking_order.size();m+=2){
-//                             Vertex* candidate_set = candidates_stack_[conflict_checking_order[m]].rbegin()->first;
-//                             uint32_t candidate_set_size = candidates_stack_[conflict_checking_order[m]].rbegin()->second;
-                            
-//                             is_empty = true;
-//                             for(int x=0;x<candidate_set_size;++x){
-//                                 Vertex can = candidate_set[x];
-//                                 if(visited_query_depth_[can] == 0){
-//                                     neighbor_candidates_.insert(can);
-//                                     is_empty = false;
-//                                 }else{
-//                                     conflict_pairs.push_back({visited_query_depth_[can], conflict_checking_order[m]});
-//                                     // cout<<"pgconflit:"<<cur_depth<<":"<<v<<":"<<visited_query_depth_[can]<<"-"<<conflict_checking_order[m]<<endl;
-//                                 }
-//                             }
-// #if PGHOLE_EMPTYSET == 0
-//                             if(candidate_set_size == 0){
-//                                 is_empty = false;
-//                             }
-// #endif
-//                             if(neighbor_candidates_.size() >= candidate_depths.size()){
-//                                 whether_conflict = false;
-//                                 break;
-//                             }else if(neighbor_candidates_.size() < m/2+1){
-//                                 whether_conflict = true;
-//                                 break;
-//                             }
-//                             if(is_empty == true){
-//                                 whether_conflict = true;
-//                                 break;
-//                             }
-//                         }
-//                         if(whether_conflict == true){
-//                             if(is_empty == false){
-//                                 for(int i=0;i<=m && i!=conflict_checking_order.size();i+=2){
-//                                     // local_conflict_depths.push_back(conflict_checking_order[i]);
-//                                     failing_set_depth[cur_depth] |= ancestors_depth_[conflict_checking_order[i]];
-//                                     // cout<<"pgconflit:"<<cur_depth<<":"<<v<<":"<<conflict_checking_order[i]<<endl;
-//                                 }
-//                             }
-//                             break;
-//                         }
-//                     }
-//                     if(whether_conflict == true){
-//                         cout<<"---------------------pghole_conflict:"<<cur_depth<<":"<<v<<endl;
-//                         // for(auto conflict_depth : local_conflict_depths){
-//                         //     cur_sets.failing_set_ |= ancestors_depth_[conflict_depth];
-//                         // }
-//                         for(auto& p : conflict_pairs){
-//                             conflict_source_depth[p.first].set(p.second);
-//                             failing_set_depth[cur_depth] |= ancestors_depth_[p.first];
-//                             failing_set_depth[cur_depth] |= ancestors_depth_[p.second];
-//                         }
-//                         if(find_matches_[cur_depth-1] == false){
-//                             failing_set_depth[cur_depth-1] |= failing_set_depth[cur_depth];
-//                         }
-
-//                         for(auto suc_depth : successor_neighbors_in_depth_[cur_depth]){
-//                             candidates_stack_[suc_depth].pop_back();
-//                             failing_set_stack_[suc_depth].pop_back();
-//                         }
-
-
-// #if PRINT_LEAF_STATE==1
-//                         leaf_states_counter_[FD_STATE] ++;
-// #endif
-//                         visited_query_depth_[v] = 0;
-//                         // max_search_depth[cur_depth-1] = (max_search_depth[cur_depth-1]<max_search_depth[cur_depth]) ? max_search_depth[cur_depth] : max_search_depth[cur_depth-1];
-//                         continue;
-//                     }
-//                 }
-#endif
 
 #if SUCCESSOR_EQUIVALENT_SET == 1
                 if(sccache.validate_cache_count(cur_depth, &(embedding_depth_[0])) == true){
@@ -996,11 +792,6 @@ void SubgraphEnum::match(Graph* query_graph, string ordering_method, uint64_t co
                 candidates_offset_[next_depth] = 0;
                 cur_depth ++;
 #if CANDIDATE_REORDER == 1
-                // searching_candidates_[next_depth].clear();
-                // uint32_t num_candidates = candidates_stack_[next_depth].rbegin()->second;
-                // Vertex* cans = candidates_stack_[next_depth].rbegin()->first;
-                // history_candidates_[cur_depth].reorder_searching_candidates(searching_candidates_[next_depth], cans, num_candidates, encoder, candidates_stack_);
-
                 if(next_depth != query_vertex_count_
 #if PGHOLE_EMPTYSET == 0
                     && candidates_stack_[next_depth].rbegin()->second>0
